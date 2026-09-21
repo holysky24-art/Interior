@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>인테리어 맞춤 견적 계산기 (실속형 & 고급형)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', 'sans-serif'],
+          },
+          colors: {
+            brandBlue: {
+              DEFAULT: '#0267c1',
+              dark: '#014f96',
+              light: '#e8f2fc',
+              border: '#93c5fd'
+            },
+            brandGreen: {
+              DEFAULT: '#228b3f',
+              dark: '#18682e',
+              light: '#ebf7ee',
+              border: '#86efac'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 태블릿/모바일 터치 최적화 스타일 */
+    select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 1.15em;
+    }
+    
+    /* 빠른 탭 터치 지연 방지 */
+    button, select, a {
+      touch-action: manipulation;
+    }
+
+    /* 숫자 카운터 애니메이션 시각효과 */
+    .price-badge {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen pb-24 lg:pb-12">
+
+  <header class="sticky top-0 z-30 bg-white/95 backdrop-blur shadow-sm border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <div class="flex items-center space-x-2">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-emerald-600 flex items-center justify-center text-white shadow">
+          <i class="fa-solid fa-calculator text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-slate-900 leading-none">인테리어 견적 산출기</h1>
+          <p class="text-xs text-slate-500 mt-1 font-medium">실속형 vs 고급형 비교 견적</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="resetAllSelections()" class="px-3 py-2 text-xs sm:text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span class="hidden sm:inline">전체 초기화</span>
+        </button>
+        <button onclick="copyQuoteSummary()" class="px-3 py-2 text-xs sm:text-sm font-bold text-white bg-slate-800 hover:bg-black rounded-lg shadow-sm flex items-center gap-1.5 transition">
+          <i class="fa-regular fa-copy"></i>
+          <span>견적 복사</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 모바일 화면용 탭 네비게이션 (태블릿/PC에서는 숨김) -->
+    <div class="md:hidden grid grid-cols-3 border-t border-slate-200 bg-white text-sm font-bold">
+      <button id="tab-btn-both" onclick="switchMobileTab('both')" class="py-2.5 text-center border-b-2 border-slate-800 text-slate-900 transition">
+        전체 보기
+      </button>
+      <button id="tab-btn-economy" onclick="switchMobileTab('economy')" class="py-2.5 text-center border-b-2 border-transparent text-slate-500 transition">
+        <span class="inline-block w-2 h-2 rounded-full bg-blue-600 mr-1"></span>실속형
+      </button>
+      <button id="tab-btn-luxury" onclick="switchMobileTab('luxury')" class="py-2.5 text-center border-b-2 border-transparent text-slate-500 transition">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-600 mr-1"></span>고급형
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+
+    <!-- 상단 안내 및 요약 배너 -->
+    <div class="mb-5 bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex items-start gap-3">
+        <div class="p-2.5 rounded-xl bg-slate-100 text-slate-600 shrink-0">
+          <i class="fa-solid fa-circle-info text-lg"></i>
+        </div>
+        <div>
+          <h2 class="text-sm sm:text-base font-bold text-slate-800">공사 항목별 옵션을 선택하여 견적을 비교해보세요</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-0.5">각 항목의 드롭다운을 탭하면 실시간으로 합계와 차액이 계산됩니다.</p>
+        </div>
+      </div>
+      
+      <!-- 데스크톱/태블릿용 빠른 합계 칩 -->
+      <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 text-right">
+        <div class="bg-blue-50/80 border border-blue-200/70 px-3 py-2 rounded-xl">
+          <span class="text-[11px] font-bold text-blue-700 block">실속형 총액</span>
+          <span id="quick-total-economy" class="text-sm sm:text-base font-black text-brandBlue price-badge">0원</span>
+        </div>
+        <div class="bg-emerald-50/80 border border-emerald-200/70 px-3 py-2 rounded-xl">
+          <span class="text-[11px] font-bold text-emerald-700 block">고급형 총액</span>
+          <span id="quick-total-luxury" class="text-sm sm:text-base font-black text-brandGreen price-badge">0원</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+      
+      <!-- ================= 01. 실속형 (파란색 테마) ================= -->
+      <section id="column-economy" class="bg-white rounded-2xl shadow-sm border-2 border-brandBlue/70 overflow-hidden flex flex-col">
+        <!-- 헤더 -->
+        <div class="bg-brandBlue text-white py-3.5 px-5 flex items-center justify-between shadow">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-tag text-lg opacity-90"></i>
+            <h2 class="text-xl sm:text-2xl font-black tracking-tight">실속형</h2>
+          </div>
+          <span class="text-xs bg-white/20 font-semibold px-2.5 py-1 rounded-full text-white/95">합리적 가성비 구성</span>
+        </div>
+
+        <!-- 칼럼 헤더 (NO / 품명) -->
+        <div class="grid grid-cols-12 bg-blue-50/60 border-b border-slate-200 text-xs sm:text-sm font-bold text-slate-700 py-2.5 px-3 sm:px-4">
+          <div class="col-span-2 text-center text-slate-600">NO</div>
+          <div class="col-span-10 pl-2">품명 및 선택 옵션</div>
+        </div>
+
+        <!-- 동적 생성 항목 리스트 영역 -->
+        <div id="list-economy" class="divide-y divide-slate-200 flex-1">
+          <!-- 자바스크립트로 자동 렌더링 됩니다 -->
+        </div>
+
+        <!-- 하단 실속형 합계 박스 -->
+        <div class="bg-brandBlue text-white p-4 sm:p-5 flex items-center justify-between mt-auto shadow-inner">
+          <span class="text-lg sm:text-xl font-black tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-coins"></i> 합계
+          </span>
+          <div class="text-right">
+            <span id="total-economy-display" class="text-2xl sm:text-3xl font-black price-badge">0</span>
+            <span class="text-base font-bold ml-1">원</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= 02. 고급형 (초록색 테마) ================= -->
+      <section id="column-luxury" class="bg-white rounded-2xl shadow-sm border-2 border-brandGreen/70 overflow-hidden flex flex-col">
+        <!-- 헤더 -->
+        <div class="bg-brandGreen text-white py-3.5 px-5 flex items-center justify-between shadow">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-crown text-lg opacity-90"></i>
+            <h2 class="text-xl sm:text-2xl font-black tracking-tight">고급형</h2>
+          </div>
+          <span class="text-xs bg-white/20 font-semibold px-2.5 py-1 rounded-full text-white/95">프리미엄 자재 구성</span>
+        </div>
+
+        <!-- 칼럼 헤더 (NO / 품명) -->
+        <div class="grid grid-cols-12 bg-emerald-50/60 border-b border-slate-200 text-xs sm:text-sm font-bold text-slate-700 py-2.5 px-3 sm:px-4">
+          <div class="col-span-2 text-center text-slate-600">NO</div>
+          <div class="col-span-10 pl-2">품명 및 선택 옵션</div>
+        </div>
+
+        <!-- 동적 생성 항목 리스트 영역 -->
+        <div id="list-luxury" class="divide-y divide-slate-200 flex-1">
+          <!-- 자바스크립트로 자동 렌더링 됩니다 -->
+        </div>
+
+        <!-- 하단 고급형 합계 박스 -->
+        <div class="bg-brandGreen text-white p-4 sm:p-5 flex items-center justify-between mt-auto shadow-inner">
+          <span class="text-lg sm:text-xl font-black tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-coins"></i> 합계
+          </span>
+          <div class="text-right">
+            <span id="total-luxury-display" class="text-2xl sm:text-3xl font-black price-badge">0</span>
+            <span class="text-base font-bold ml-1">원</span>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <section class="mt-6 bg-white rounded-2xl p-5 sm:p-6 shadow-sm border border-slate-200">
+      <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <i class="fa-solid fa-scale-balanced text-indigo-600"></i>
+        <span>견적 종합 분석 및 차액 비교</span>
+      </h3>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- 실속형 소계 -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">실속형 선택 합계</span>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span class="text-xs text-blue-600 font-bold"><i class="fa-solid fa-check mr-1"></i>경제적</span>
+            <div class="text-right">
+              <span id="summary-economy-price" class="text-lg sm:text-xl font-extrabold text-slate-900 price-badge">0</span>
+              <span class="text-xs font-medium text-slate-500 ml-0.5">원</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 고급형 소계 -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">고급형 선택 합계</span>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span class="text-xs text-emerald-600 font-bold"><i class="fa-solid fa-gem mr-1"></i>프리미엄</span>
+            <div class="text-right">
+              <span id="summary-luxury-price" class="text-lg sm:text-xl font-extrabold text-slate-900 price-badge">0</span>
+              <span class="text-xs font-medium text-slate-500 ml-0.5">원</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 두 타입 간 차액 및 종합 -->
+        <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4">
+          <span class="text-xs font-semibold text-indigo-900 uppercase tracking-wider block">두 견적 간 차액 (고급형 - 실속형)</span>
+          <div class="mt-2 flex items-baseline justify-between">
+            <span id="summary-diff-badge" class="text-xs font-bold text-indigo-700">차액 계산</span>
+            <div class="text-right">
+              <span id="summary-difference" class="text-lg sm:text-xl font-extrabold text-indigo-700 price-badge">0</span>
+              <span class="text-xs font-medium text-indigo-600 ml-0.5">원</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 모바일/태블릿 원터치 프리셋 버튼 -->
+      <div class="mt-4 pt-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <span class="text-xs text-slate-500 font-medium">빠른 채우기:</span>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="applyPreset('basic')" class="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold rounded-lg transition">
+            실속형 1번 옵션 일괄선택
+          </button>
+          <button onclick="applyPreset('luxury')" class="px-3 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold rounded-lg transition">
+            고급형 최고급 옵션 일괄선택
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-xs sm:text-sm font-medium px-4 py-2.5 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center gap-2">
+    <i class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toast-message">알림</span>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * [사용자 설정 영역] 공사 품명, 옵션명, 가격을 이곳에서 손쉽게 수정하세요!
+     * =========================================================================
+     * - id: 1부터 7까지의 번호
+     * - title: 견적서 품명 표기
+     * - economyOptions: 실속형 셀렉트박스 예시 3개 + 선택안함
+     * - luxuryOptions: 고급형 셀렉트박스 예시 3개 + 선택안함
+     * - price: 가격(원 단위 숫자 입력)
+     */
+    const ESTIMATE_CONFIG = [
+      {
+        id: "01",
+        title: "벽체공사",
+        economyOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "합지 도배 (기본 화이트톤)", price: 750000 },
+          { name: "광폭 합지 시공 (방/거실)", price: 950000 },
+          { name: "기본 실크벽지 부분 시공", price: 1200000 }
+        ],
+        luxuryOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "친환경 프리미엄 실크 도배", price: 1800000 },
+          { name: "디아망 하이엔드 텍스처 벽지", price: 2400000 },
+          { name: "벽체 평탄화 + 수입 도장/필름 마감", price: 3500000 }
+        ]
+      },
+      {
+        id: "02",
+        title: "바닥공사",
+        economyOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "모노륨 장판 1.8T 시공", price: 650000 },
+          { name: "친환경 장판 2.2T 시공", price: 900000 },
+          { name: "보급형 강화마루 시공", price: 1300000 }
+        ],
+        luxuryOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "광폭 프리미엄 강마루 시공", price: 2200000 },
+          { name: "원목 무늬목 질감 프리미엄 마루", price: 3100000 },
+          { name: "대형 포세린/졸리컷 타일 시공", price: 4200000 }
+        ]
+      },
+      {
+        id: "03",
+        title: "화장실공사",
+        economyOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "기본 덧방 시공 + 도기 2종", price: 1900000 },
+          { name: "표준 덧방 + SMC 천장 + 댐퍼장", price: 2300000 },
+          { name: "표준형 + 파티션 + 악세사리 풀세트", price: 2700000 }
+        ],
+        luxuryOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "전체 철거/방수 + 고급 타일 시공", price: 3800000 },
+          { name: "600각 포세린 졸리컷 + 아메리칸스탠다드", price: 4800000 },
+          { name: "매립수전 + 조적욕조 + 호텔식 하부장", price: 6200000 }
+        ]
+      },
+      {
+        id: "04",
+        title: "베란다 공사(1개소 기준)",
+        economyOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "바닥 타일 덧방 시공", price: 450000 },
+          { name: "바닥 타일 + 기본 수성페인트", price: 650000 },
+          { name: "바닥 타일 + 기능성 탄성코트", price: 800000 }
+        ],
+        luxuryOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "친환경 세라믹 탄성코트 + 우드타일", price: 1100000 },
+          { name: "단열 공사 + 포세린 타일 + 에어로겔 코트", price: 1650000 },
+          { name: "베란다 확장 단열 공사 + 시스템 창호 마감", price: 2500000 }
+        ]
+      },
+      {
+        id: "05",
+        title: "씽크대 공사(10자 기준)",
+        economyOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "기본 UV하이그로시 + 인조대리석", price: 1800000 },
+          { name: "PET 무광 화이트 + 기본 침니후드", price: 2200000 },
+          { name: "PET 도어 + 백조 싱크볼 + 가스쿡탑", price: 2600000 }
+        ],
+        luxuryOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "한샘/리바트 커스텀 + 인덕션 매립", price: 3900000 },
+          { name: "무몰딩 도장도어 + 칸스톤 엔지니어드스톤", price: 5400000 },
+          { name: "수입 세라믹 상판 + 블룸 하드웨어 프리미엄", price: 7800000 }
+        ]
+      },
+      {
+        id: "06",
+        title: "페인트 공사or 목공사",
+        economyOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "문/문틀 3세트 유성/수성 페인트", price: 500000 },
+          { name: "걸레받이 + 몰딩 기본 교체 시공", price: 750000 },
+          { name: "기본 문틀 리폼 + 천장 몰딩 시공", price: 1100000 }
+        ],
+        luxuryOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "영림 9mm 문선/히든도어 목공 세트", price: 1900000 },
+          { name: "친환경 벤자민무어 프리미엄 뿜칠", price: 2800000 },
+          { name: "전체 무문선/스텝도어 + 간접등박스 목공", price: 3900000 }
+        ]
+      },
+      {
+        id: "07",
+        title: "조명공사",
+        economyOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "슬림 LED 평판등 전체 교체", price: 400000 },
+          { name: "LED 엣지조명 풀세트 + 스위치 교체", price: 650000 },
+          { name: "거실 엣지등 + 3인치 다운라이트 6구", price: 850000 }
+        ],
+        luxuryOptions: [
+          { name: "선택 안함", price: 0 },
+          { name: "우물천장 T5 간접조명 + 다운라이트 풀시공", price: 1500000 },
+          { name: "마그네틱 라인조명 + 스마트 디밍 시스템", price: 2400000 },
+          { name: "하이엔드 COB 조명 설계 + 특수 펜던트", price: 3400000 }
+        ]
+      }
+    ];
+
+    // 각 항목별 선택된 금액을 보관하는 상태 객체
+    const selectedState = {
+      economy: {}, // { "01": price, "02": price, ... }
+      luxury: {}
+    };
+
+    /**
+     * 금액에 세 자리 콤마를 추가하는 헬퍼 함수
+     */
+    function formatCurrency(amount) {
+      return Number(amount || 0).toLocaleString('ko-KR');
+    }
+
+    /**
+     * UI 렌더링 함수: 설정 데이터를 기반으로 실속형/고급형 카드를 생성합니다.
+     */
+    function renderApp() {
+      const economyContainer = document.getElementById('list-economy');
+      const luxuryContainer = document.getElementById('list-luxury');
+
+      economyContainer.innerHTML = '';
+      luxuryContainer.innerHTML = '';
+
+      ESTIMATE_CONFIG.forEach((item) => {
+        // 1. 실속형 항목 생성
+        const economyRow = createItemRow(item, 'economy');
+        economyContainer.appendChild(economyRow);
+
+        // 2. 고급형 항목 생성
+        const luxuryRow = createItemRow(item, 'luxury');
+        luxuryContainer.appendChild(luxuryRow);
+
+        // 초기 상태값 할당 (0원)
+        selectedState.economy[item.id] = 0;
+        selectedState.luxury[item.id] = 0;
+      });
+
+      calculateTotals();
+    }
+
+    /**
+     * 개별 공사 품목 행(Row) 생성기
+     */
+    function createItemRow(item, type) {
+      const isEconomy = type === 'economy';
+      const options = isEconomy ? item.economyOptions : item.luxuryOptions;
+      const themeFocusRing = isEconomy ? 'focus:ring-brandBlue focus:border-brandBlue' : 'focus:ring-brandGreen focus:border-brandGreen';
+      const themeNoColor = isEconomy ? 'text-blue-700 bg-blue-50/70' : 'text-emerald-700 bg-emerald-50/70';
+
+      const row = document.createElement('div');
+      row.className = 'p-3 sm:p-4 hover:bg-slate-50/80 transition flex flex-col justify-center';
+
+      // 템플릿 구조
+      row.innerHTML = `
+        <div class="grid grid-cols-12 gap-2 sm:gap-3 items-center">
+          <!-- NO 넘버링 -->
+          <div class="col-span-2 sm:col-span-2 flex items-center justify-center">
+            <span class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl font-extrabold text-xs sm:text-sm ${themeNoColor}">
+              ${item.id}
+            </span>
+          </div>
+
+          <!-- 품명 및 셀렉트박스 영역 -->
+          <div class="col-span-10 sm:col-span-10">
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="${type}-${item.id}" class="text-xs sm:text-sm font-bold text-slate-800">
+                ${item.title}
+              </label>
+              <span id="price-tag-${type}-${item.id}" class="text-[11px] sm:text-xs font-semibold text-slate-400">
+                0원
+              </span>
+            </div>
+
+            <div class="relative">
+              <select id="${type}-${item.id}" 
+                data-type="${type}" 
+                data-id="${item.id}"
+                onchange="handleOptionChange(this)"
+                class="w-full text-xs sm:text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-xl py-2.5 pl-3 pr-8 shadow-sm transition ${themeFocusRing} outline-none cursor-pointer">
+                ${options.map((opt, idx) => `
+                  <option value="${opt.price}" data-name="${opt.name}">
+                    ${opt.name} ${opt.price > 0 ? `(+${formatCurrency(opt.price)}원)` : ''}
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+
+      return row;
+    }
+
+    /**
+     * 드롭다운 옵션 변경 이벤트 처리
+     */
+    function handleOptionChange(selectElement) {
+      const type = selectElement.getAttribute('data-type');
+      const id = selectElement.getAttribute('data-id');
+      const price = parseInt(selectElement.value, 10) || 0;
+
+      // 상태 업데이트
+      selectedState[type][id] = price;
+
+      // 해당 항목의 가격 뱃지 업데이트
+      const badge = document.getElementById(`price-tag-${type}-${id}`);
+      if (badge) {
+        if (price > 0) {
+          badge.textContent = `${formatCurrency(price)}원`;
+          badge.className = `text-[11px] sm:text-xs font-extrabold ${type === 'economy' ? 'text-brandBlue' : 'text-brandGreen'}`;
+        } else {
+          badge.textContent = '0원';
+          badge.className = 'text-[11px] sm:text-xs font-semibold text-slate-400';
+        }
+      }
+
+      calculateTotals();
+    }
+
+    /**
+     * 실시간 합계 및 차액 종합 산출
+     */
+    function calculateTotals() {
+      let economyTotal = 0;
+      let luxuryTotal = 0;
+
+      // 실속형 총합
+      Object.values(selectedState.economy).forEach(price => {
+        economyTotal += price;
+      });
+
+      // 고급형 총합
+      Object.values(selectedState.luxury).forEach(price => {
+        luxuryTotal += price;
+      });
+
+      // 1. 하단 메인 박스 합계 갱신
+      document.getElementById('total-economy-display').textContent = formatCurrency(economyTotal);
+      document.getElementById('total-luxury-display').textContent = formatCurrency(luxuryTotal);
+
+      // 2. 상단 퀵 칩 갱신
+      document.getElementById('quick-total-economy').textContent = `${formatCurrency(economyTotal)}원`;
+      document.getElementById('quick-total-luxury').textContent = `${formatCurrency(luxuryTotal)}원`;
+
+      // 3. 하단 요약 패널 갱신
+      document.getElementById('summary-economy-price').textContent = formatCurrency(economyTotal);
+      document.getElementById('summary-luxury-price').textContent = formatCurrency(luxuryTotal);
+
+      // 차액 계산
+      const diff = luxuryTotal - economyTotal;
+      const diffEl = document.getElementById('summary-difference');
+      const diffBadge = document.getElementById('summary-diff-badge');
+
+      if (diff >= 0) {
+        diffEl.textContent = `+${formatCurrency(diff)}`;
+        diffBadge.textContent = "고급형 추가비용";
+      } else {
+        diffEl.textContent = `-${formatCurrency(Math.abs(diff))}`;
+        diffBadge.textContent = "실속형이 더 큼";
+      }
+    }
+
+    /**
+     * 전체 선택 초기화
+     */
+    function resetAllSelections() {
+      document.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0;
+      });
+
+      ESTIMATE_CONFIG.forEach(item => {
+        selectedState.economy[item.id] = 0;
+        selectedState.luxury[item.id] = 0;
+
+        const ecoBadge = document.getElementById(`price-tag-economy-${item.id}`);
+        const luxBadge = document.getElementById(`price-tag-luxury-${item.id}`);
+        if (ecoBadge) {
+          ecoBadge.textContent = '0원';
+          ecoBadge.className = 'text-[11px] sm:text-xs font-semibold text-slate-400';
+        }
+        if (luxBadge) {
+          luxBadge.textContent = '0원';
+          luxBadge.className = 'text-[11px] sm:text-xs font-semibold text-slate-400';
+        }
+      });
+
+      calculateTotals();
+      showToast('모든 선택 항목이 초기화되었습니다.');
+    }
+
+    /**
+     * 프리셋 자동 선택 (테스트 및 편의용)
+     */
+    function applyPreset(presetType) {
+      if (presetType === 'basic') {
+        ESTIMATE_CONFIG.forEach(item => {
+          const select = document.getElementById(`economy-${item.id}`);
+          if (select) {
+            select.selectedIndex = 1; // 1번째 실제 옵션
+            handleOptionChange(select);
+          }
+        });
+        showToast('실속형 1번 옵션이 적용되었습니다.');
+      } else if (presetType === 'luxury') {
+        ESTIMATE_CONFIG.forEach(item => {
+          const select = document.getElementById(`luxury-${item.id}`);
+          if (select) {
+            select.selectedIndex = 3; // 3번째 프리미엄 옵션
+            handleOptionChange(select);
+          }
+        });
+        showToast('고급형 최고급 옵션이 적용되었습니다.');
+      }
+    }
+
+    /**
+     * 모바일 뷰 전용 탭 전환 기능
+     */
+    function switchMobileTab(tab) {
+      const colEconomy = document.getElementById('column-economy');
+      const colLuxury = document.getElementById('column-luxury');
+
+      const btnBoth = document.getElementById('tab-btn-both');
+      const btnEco = document.getElementById('tab-btn-economy');
+      const btnLux = document.getElementById('tab-btn-luxury');
+
+      // 탭 스타일 초기화
+      [btnBoth, btnEco, btnLux].forEach(b => {
+        b.className = "py-2.5 text-center border-b-2 border-transparent text-slate-500 transition";
+      });
+
+      if (tab === 'both') {
+        colEconomy.classList.remove('hidden');
+        colLuxury.classList.remove('hidden');
+        btnBoth.className = "py-2.5 text-center border-b-2 border-slate-800 text-slate-900 font-bold transition";
+      } else if (tab === 'economy') {
+        colEconomy.classList.remove('hidden');
+        colLuxury.classList.add('hidden');
+        btnEco.className = "py-2.5 text-center border-b-2 border-blue-600 text-blue-600 font-bold transition";
+      } else if (tab === 'luxury') {
+        colEconomy.classList.add('hidden');
+        colLuxury.classList.remove('hidden');
+        btnLux.className = "py-2.5 text-center border-b-2 border-emerald-600 text-emerald-600 font-bold transition";
+      }
+    }
+
+    /**
+     * 견적 요약 텍스트 클립보드 복사
+     */
+    function copyQuoteSummary() {
+      let ecoTotal = document.getElementById('total-economy-display').innerText;
+      let luxTotal = document.getElementById('total-luxury-display').innerText;
+
+      let summaryText = `[인테리어 견적 요약서]\n`;
+      summaryText += `---------------------------------\n`;
+      summaryText += `■ 실속형 총 견적: ${ecoTotal}원\n`;
+      ESTIMATE_CONFIG.forEach(item => {
+        const select = document.getElementById(`economy-${item.id}`);
+        const opt = select.options[select.selectedIndex];
+        if (select.value > 0) {
+          summaryText += `  - ${item.title}: ${opt.getAttribute('data-name')} (${formatCurrency(select.value)}원)\n`;
+        }
+      });
+
+      summaryText += `\n■ 고급형 총 견적: ${luxTotal}원\n`;
+      ESTIMATE_CONFIG.forEach(item => {
+        const select = document.getElementById(`luxury-${item.id}`);
+        const opt = select.options[select.selectedIndex];
+        if (select.value > 0) {
+          summaryText += `  - ${item.title}: ${opt.getAttribute('data-name')} (${formatCurrency(select.value)}원)\n`;
+        }
+      });
+      summaryText += `---------------------------------\n`;
+      summaryText += `(견적 비교 결과 두 타입의 차액은 ${document.getElementById('summary-difference').innerText}원 입니다.)`;
+
+      // 클립보드 복사 실행 (아이프레임 환경 호환용 fallback 방식 적용)
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = summaryText;
+      tempTextArea.style.position = 'fixed';
+      tempTextArea.style.opacity = '0';
+      document.body.appendChild(tempTextArea);
+      tempTextArea.focus();
+      tempTextArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast('견적 내역이 클립보드에 복사되었습니다.');
+        } else {
+          showToast('복사에 실패했습니다. 다시 시도해주세요.');
+        }
+      } catch (err) {
+        showToast('클립보드 접근이 지원되지 않는 환경입니다.');
+      }
+      document.body.removeChild(tempTextArea);
+    }
+
+    /**
+     * 심플 토스트 알림창 노출
+     */
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.innerText = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0', 'pointer-events-none');
+      }, 2300);
+    }
+
+    // 초기 실행
+    window.addEventListener('DOMContentLoaded', () => {
+      renderApp();
+    });
+  </script>
+</body>
+</html>
